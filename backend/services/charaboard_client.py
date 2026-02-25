@@ -21,7 +21,6 @@ def _build_messages_with_image(image_base64: str, intent: str) -> list[dict[str,
     """Build messages: system + user with image (OpenAI-style multimodal content)."""
     from prompts.photo_director import SYSTEM_PROMPT, build_user_message
 
-    # Ensure data URL format for vision APIs
     if not image_base64.strip().startswith("data:"):
         image_url = f"data:image/jpeg;base64,{image_base64.strip()}"
     else:
@@ -29,7 +28,6 @@ def _build_messages_with_image(image_base64: str, intent: str) -> list[dict[str,
 
     text_part = build_user_message(intent)
 
-    # OpenAI-compatible vision: content as array with text and image_url
     user_content = [
         {"type": "text", "text": text_part},
         {"type": "image_url", "image_url": {"url": image_url}},
@@ -43,7 +41,7 @@ def _build_messages_with_image(image_base64: str, intent: str) -> list[dict[str,
 
 def analyze_frame(image_base64: str, intent: str) -> tuple[DirectorResponse, float]:
     """
-    Call CharaBoard chat completions with image + intent, return parsed DirectorResponse and latency in seconds.
+    Call CharaBoard chat completions with image + intent, return DirectorResponse and latency in seconds.
     Raises httpx.HTTPStatusError or ValueError on failure.
     """
     base = CHARABOARD_BASE_URL.rstrip("/")

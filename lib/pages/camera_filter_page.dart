@@ -12,6 +12,7 @@ import 'package:record/record.dart';
 import '../commons/filePathHelper.dart';
 import '../commons/string.dart';
 import '../manager/PermissionHelper.dart';
+import '../models/analyze_with_voice_response.dart';
 
 /// Real-time camera filter research page.
 /// Uses Shader (pro_camera.frag) with ImageFilter + BackdropFilter.
@@ -77,12 +78,12 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    if (state == AppLifecycleState.inactive) {
-      _controller?.dispose();
-    } else if (state == AppLifecycleState.resumed) {
-      _initCamera();
-    }
+    // if (_controller == null || !_controller!.value.isInitialized) return;
+    // if (state == AppLifecycleState.inactive) {
+    //   _controller?.dispose();
+    // } else if (state == AppLifecycleState.resumed) {
+    //   _initCamera();
+    // }
   }
 
   Future<void> _loadShader() async {
@@ -237,7 +238,6 @@ class _CameraFilterPageState extends State<CameraFilterPage>
           'audio_media_type': 'audio/mp4',
         }),
       );
-      print(response.body);
 
       if (!mounted) return;
       setState(() => _isAskingAi = false);
@@ -251,21 +251,17 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         return;
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      _applyDirectorResponse(data);
+      final resp = AnalyzeWithVoiceResponse.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+      _applyDirectorResponse(resp);
 
-      final voiceB64 = data['voice_guide_audio_base64'] as String?;
-      if (voiceB64 != null && voiceB64.isNotEmpty) {
-        _playVoiceGuideAudio(voiceB64);
-      }
-
-      final guide = data['voice_guide'] as String?;
-      if (guide != null &&
-          guide.isNotEmpty &&
-          (voiceB64 == null || voiceB64.isEmpty)) {
+      if (resp.voiceGuideAudioBase64.isNotEmpty) {
+        _playVoiceGuideAudio(resp.voiceGuideAudioBase64);
+      } else if (resp.voiceGuide.isNotEmpty) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(guide)));
+        ).showSnackBar(SnackBar(content: Text(resp.voiceGuide)));
       }
     } catch (e) {
       if (mounted) {
@@ -290,18 +286,17 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   }
 
   /// 将 /api/analyze_with_voice 返回的 shader 等写入当前状态
-  void _applyDirectorResponse(Map<String, dynamic> data) {
-    final shader = data['shader'] as Map<String, dynamic>?;
-    if (shader == null) return;
+  void _applyDirectorResponse(AnalyzeWithVoiceResponse resp) {
+    final shader = resp.shader;
     setState(() {
-      _brightness = (shader['brightness'] as num?)?.toDouble() ?? _brightness;
-      _saturation = (shader['saturation'] as num?)?.toDouble() ?? _saturation;
-      _contrast = (shader['contrast'] as num?)?.toDouble() ?? _contrast;
-      _tintR = (shader['tintR'] as num?)?.toDouble() ?? _tintR;
-      _tintG = (shader['tintG'] as num?)?.toDouble() ?? _tintG;
-      _tintB = (shader['tintB'] as num?)?.toDouble() ?? _tintB;
-      _warmth = (shader['warmth'] as num?)?.toDouble() ?? _warmth;
-      _vignette = (shader['vignette'] as num?)?.toDouble() ?? _vignette;
+      _brightness = shader.brightness;
+      _saturation = shader.saturation;
+      _contrast = shader.contrast;
+      _tintR = shader.tintR;
+      _tintG = shader.tintG;
+      _tintB = shader.tintB;
+      _warmth = shader.warmth;
+      _vignette = shader.vignette;
     });
   }
 
@@ -431,7 +426,6 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         fit: BoxFit.cover,
         child: Column(
           children: [
-            // SizedBox(height: 200),
             Stack(
               children: [
                 SizedBox(

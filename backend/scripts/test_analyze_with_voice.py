@@ -43,9 +43,9 @@ def main():
         resp.raise_for_status()
         data = resp.json()
         b64 = data.get("voice_guide_audio_base64")
-        if not b64:
-            print("响应中无 voice_guide_audio_base64")
-            sys.exit(1)
+        # if not b64:
+        #     print("响应中无 voice_guide_audio_base64")
+        #     sys.exit(1)
         raw = base64.b64decode(b64)
         OUTPUT_FILE.write_bytes(raw)
         print(f"已保存: {OUTPUT_FILE} ({len(raw)} 字节)")

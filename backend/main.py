@@ -11,11 +11,12 @@ Phase 1.1: FastAPI 中继 + CharaBoard 多模态调用与延迟测试.
 import base64
 import logging
 import time
+from concurrent.futures import TimeoutError as FuturesTimeoutError, ThreadPoolExecutor
 
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import CHARABOARD_API_KEY
+from config import CHARABOARD_API_KEY, MOCK_ANALYZE_WITH_VOICE_RESPONSE, ANALYZE_WITH_VOICE_TIMEOUT_SECONDS
 from schemas import (
     AnalyzeRequest,
     AnalyzeWithVoiceRequest,
@@ -32,6 +33,7 @@ from services.text_to_speech import text_to_speech, VOICE_ID_ZH_FEMALE
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 app = FastAPI(
     title="AI Photo Director API",
@@ -137,10 +139,37 @@ def tts(req: TtsRequest):
         raise HTTPException(status_code=502, detail=str(e))
 
 
+def _do_analyze_with_voice(req: AnalyzeWithVoiceRequest) -> AnalyzeWithVoiceResponse:
+    """内部：转写 -> 分析 -> TTS。在子线程中执行，主线程通过 future.result(timeout) 计时。"""
+    text = transcribe_audio(req.audio_base64, req.audio_media_type)
+    director, _ = analyze_frame(req.image_base64, text or "")
+
+    voice_guide_audio_b64 = ""
+    voice_guide_audio_content_type = "audio/mpeg"
+    if director.voice_guide and director.voice_guide.strip():
+        try:
+            audio_bytes, content_type = text_to_speech(
+                director.voice_guide.strip(),
+                voice_id=VOICE_ID_ZH_FEMALE,
+                model_id="eleven_multilingual_v2",
+                language_code="zh",
+            )
+            voice_guide_audio_b64 = base64.b64encode(audio_bytes).decode()
+            voice_guide_audio_content_type = content_type
+        except Exception as e:
+            logger.warning("analyze_with_voice TTS voice_guide failed: %s", e)
+
+    return AnalyzeWithVoiceResponse(
+        **director.model_dump(),
+        voice_guide_audio_base64=voice_guide_audio_b64,
+        voice_guide_audio_content_type=voice_guide_audio_content_type,
+    )
+
+
 @app.post("/api/analyze_with_voice", response_model=AnalyzeWithVoiceResponse)
 def analyze_with_voice(req: AnalyzeWithVoiceRequest, response: Response):
     """
-    接收语音 Base64 + 图片 Base64：先转写得文本，再分析；返回 Director 结构，并将 voice_guide 转成语音 Base64 返回。
+    接收语音+图片：先转写再分析并 TTS。请求过程中计时，若 10s 内未完成则终止等待、直接返回王家卫风格 mock。
     """
     if not CHARABOARD_API_KEY:
         logger.warning("CHARABOARD_API_KEY not set -> 503")
@@ -149,37 +178,34 @@ def analyze_with_voice(req: AnalyzeWithVoiceRequest, response: Response):
             detail="CHARABOARD_API_KEY not set. Add it to backend/.env and restart uvicorn.",
         )
     t0 = time.perf_counter()
+    deadline = t0 + ANALYZE_WITH_VOICE_TIMEOUT_SECONDS
+    poll_interval = 0.5
+    executor = ThreadPoolExecutor(max_workers=1)
     try:
-        text = transcribe_audio(req.audio_base64, req.audio_media_type)
-        t1 = time.perf_counter()
-        director, elapsed = analyze_frame(req.image_base64, text or "")
-        total = time.perf_counter() - t0
-
-        voice_guide_audio_b64 = ""
-        voice_guide_audio_content_type = "audio/mpeg"
-        if director.voice_guide and director.voice_guide.strip():
-            try:
-                audio_bytes, content_type = text_to_speech(
-                    director.voice_guide.strip(),
-                    voice_id=VOICE_ID_ZH_FEMALE,
-                    model_id="eleven_multilingual_v2",
-                    language_code="zh",
+        future = executor.submit(_do_analyze_with_voice, req)
+        while True:
+            now = time.perf_counter()
+            if now >= deadline:
+                executor.shutdown(wait=False)  # 不等待子线程，否则 return 后 with 会阻塞到线程结束
+                total = now - t0
+                logger.warning(
+                    "/api/analyze_with_voice 计时到 %.1fs 分析未结束，终止等待并返回 mock",
+                    total,
                 )
-                voice_guide_audio_b64 = base64.b64encode(audio_bytes).decode()
-                voice_guide_audio_content_type = content_type
-            except Exception as e:
-                logger.warning("analyze_with_voice TTS voice_guide failed: %s", e)
-
-        logger.info(
-            "/api/analyze_with_voice transcribe=%.3fs analyze=%.3fs total=%.3fs intent=%s",
-            t1 - t0, elapsed, total, (text or "")[:50],
-        )
-        response.headers["X-Response-Time-Seconds"] = f"{elapsed:.3f}"
-        return AnalyzeWithVoiceResponse(
-            **director.model_dump(),
-            voice_guide_audio_base64=voice_guide_audio_b64,
-            voice_guide_audio_content_type=voice_guide_audio_content_type,
-        )
+                response.headers["X-Response-Time-Seconds"] = f"{total:.3f}"
+                response.headers["X-Response-Mock"] = "true"
+                return MOCK_ANALYZE_WITH_VOICE_RESPONSE
+            try:
+                result = future.result(timeout=poll_interval)
+                break
+            except FuturesTimeoutError:
+                continue
+        executor.shutdown(wait=False)
+        total = time.perf_counter() - t0
+        logger.info("/api/analyze_with_voice total=%.3fs (real)", total)
+        response.headers["X-Response-Time-Seconds"] = f"{total:.3f}"
+        return result
     except Exception as e:
+        executor.shutdown(wait=False)
         logger.exception("analyze_with_voice failed: %s", e)
         raise HTTPException(status_code=502, detail=str(e))

@@ -10,6 +10,8 @@ uniform float uBrightness;   // -1.0 to 1.0
 uniform float uSaturation;   // 0.0 to 2.0
 uniform float uContrast;     // 0.5 to 1.5
 uniform vec3 uTint;          // RGB tint
+uniform float uWarmth;       // 0.0 = cool, 1.0 = neutral, 2.0 = warm
+uniform float uVignette;     // 0.0 = off, 1.0 = strong
 
 out vec4 fragColor;
 
@@ -34,6 +36,16 @@ void main() {
 
   // Apply tint: multiply RGB by tint
   color.rgb *= uTint;
+
+  // Apply warmth: shift toward red/orange (0=cool, 1=neutral, 2=warm)
+  float w = (uWarmth - 1.0) * 0.5;
+  color.r += w;
+  color.b -= w;
+
+  // Apply vignette: darken toward edges
+  vec2 cen = uv - 0.5;
+  float dist = length(cen) * 1.414;
+  color.rgb *= 1.0 - uVignette * smoothstep(0.4, 1.0, dist);
 
   // Clamp to valid range
   color = clamp(color, 0.0, 1.0);

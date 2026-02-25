@@ -19,6 +19,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   List<CameraDescription>? _cameras;
   String? _error;
   bool _isInitialized = false;
+  bool _useFrontCamera = false;
 
   // Shader parameters
   double _brightness = 0.0; // -1.0 to 1.0
@@ -27,6 +28,8 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   double _tintR = 1.0; // 0.0 to 2.0
   double _tintG = 1.0;
   double _tintB = 1.0;
+  double _warmth = 1.0; // 0.0 = cool, 1.0 = neutral, 2.0 = warm
+  double _vignette = 0.0; // 0.0 = off, 1.0 = strong
 
   // FPS
   int _frameCount = 0;
@@ -64,7 +67,9 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   Future<void> _loadShader() async {
     try {
-      final program = await ui.FragmentProgram.fromAsset('shaders/pro_camera.frag');
+      final program = await ui.FragmentProgram.fromAsset(
+        'shaders/pro_camera.frag',
+      );
       if (mounted) {
         setState(() {
           _fragmentProgram = program;
@@ -83,23 +88,29 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   Future<void> _initCamera() async {
     try {
       _cameras ??= await availableCameras();
-      final back = _cameras!.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
+      final target = _cameras!.firstWhere(
+        (c) =>
+            c.lensDirection ==
+            (_useFrontCamera
+                ? CameraLensDirection.front
+                : CameraLensDirection.back),
         orElse: () => _cameras!.first,
       );
-      _controller = CameraController(
-        back,
+      final newController = CameraController(
+        target,
         ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
-      await _controller!.initialize();
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          _error = null;
-        });
-      }
+      await newController.initialize();
+      if (!mounted) return;
+      final old = _controller;
+      _controller = newController;
+      setState(() {
+        _isInitialized = true;
+        _error = null;
+      });
+      old?.dispose();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -107,6 +118,18 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         });
       }
     }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras == null || _cameras!.length < 2) return;
+    final nextFront = !_useFrontCamera;
+    setState(() {
+      _isInitialized = false;
+      _useFrontCamera = nextFront;
+    });
+    _controller?.dispose();
+    _controller = null;
+    await _initCamera();
   }
 
   void _startFpsCounter() {
@@ -124,6 +147,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       }
       WidgetsBinding.instance.addPostFrameCallback(onFrame);
     }
+
     WidgetsBinding.instance.addPostFrameCallback(onFrame);
   }
 
@@ -131,9 +155,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: _buildBody(),
-      ),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
@@ -147,7 +169,11 @@ class _CameraFilterPageState extends State<CameraFilterPage>
             children: [
               Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
               const SizedBox(height: 16),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white)),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white),
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: () {
@@ -178,50 +204,81 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         if (_shaderReady && _fragmentProgram != null) _buildShaderOverlay(),
 
         // Control panel
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: _buildControlPanel(),
-        ),
+        Positioned(left: 0, right: 0, bottom: 0, child: _buildControlPanel()),
 
         // FPS
-        Positioned(
-          top: 8,
-          right: 8,
-          child: _buildFpsBadge(),
-        ),
+        Positioned(top: 8, right: 8, child: _buildFpsBadge()),
+
+        // 前后摄像头切换
+        Positioned(top: 8, left: 8, child: _buildSwitchCameraButton()),
       ],
     );
   }
 
   Widget _buildCameraPreview() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = _controller!.value.previewSize;
-        if (size == null) return const SizedBox.expand();
+    final size = _controller!.value.previewSize;
+    if (size == null) return const SizedBox.expand();
 
-        final aspectRatio = size.height / size.width;
-        return Center(
-          child: AspectRatio(
-            aspectRatio: 1 / aspectRatio,
-            child: CameraPreview(_controller!),
+    // 传感器多为横屏 (width > height)，竖屏显示需交换宽高，否则画面被拉长
+    final needSwap = size.width > size.height;
+    final previewW = needSwap ? size.height : size.width;
+    final previewH = needSwap ? size.width : size.height;
+
+    return SizedBox.expand(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: Column(
+          children: [
+            // SizedBox(height: 200),
+            SizedBox(
+              width: previewW,
+              height: previewH,
+              child: CameraPreview(
+                _controller!,
+                key: ValueKey(_useFrontCamera),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchCameraButton() {
+    final hasMultiple = _cameras != null && _cameras!.length >= 2;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: hasMultiple ? _switchCamera : null,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(24),
           ),
-        );
-      },
+          child: Icon(
+            Icons.cameraswitch,
+            color: hasMultiple ? Colors.white : Colors.white38,
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildShaderOverlay() {
     final shader = _fragmentProgram!.fragmentShader();
 
-    // Uniform indices: 0,1=u_size (engine), 2=uBrightness, 3=uSaturation, 4=uContrast, 5,6,7=uTint
+    // Uniform indices: 0,1=u_size (engine), 2=uBrightness, 3=uSaturation, 4=uContrast, 5,6,7=uTint, 8=uWarmth, 9=uVignette
     shader.setFloat(2, _brightness);
     shader.setFloat(3, _saturation);
     shader.setFloat(4, _contrast);
     shader.setFloat(5, _tintR);
     shader.setFloat(6, _tintG);
     shader.setFloat(7, _tintB);
+    shader.setFloat(8, _warmth);
+    shader.setFloat(9, _vignette);
 
     return ClipRect(
       child: SizedBox.expand(
@@ -246,12 +303,62 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildSlider('Brightness', _brightness, -1.0, 1.0, (v) => setState(() => _brightness = v)),
-          _buildSlider('Saturation', _saturation, 0.0, 2.0, (v) => setState(() => _saturation = v)),
-          _buildSlider('Contrast', _contrast, 0.5, 1.5, (v) => setState(() => _contrast = v)),
-          _buildSlider('Tint R', _tintR, 0.0, 2.0, (v) => setState(() => _tintR = v)),
-          _buildSlider('Tint G', _tintG, 0.0, 2.0, (v) => setState(() => _tintG = v)),
-          _buildSlider('Tint B', _tintB, 0.0, 2.0, (v) => setState(() => _tintB = v)),
+          _buildSlider(
+            'Brightness',
+            _brightness,
+            -1.0,
+            1.0,
+            (v) => setState(() => _brightness = v),
+          ),
+          _buildSlider(
+            'Saturation',
+            _saturation,
+            0.0,
+            2.0,
+            (v) => setState(() => _saturation = v),
+          ),
+          _buildSlider(
+            'Contrast',
+            _contrast,
+            0.5,
+            1.5,
+            (v) => setState(() => _contrast = v),
+          ),
+          _buildSlider(
+            'Tint R',
+            _tintR,
+            0.0,
+            2.0,
+            (v) => setState(() => _tintR = v),
+          ),
+          _buildSlider(
+            'Tint G',
+            _tintG,
+            0.0,
+            2.0,
+            (v) => setState(() => _tintG = v),
+          ),
+          _buildSlider(
+            'Tint B',
+            _tintB,
+            0.0,
+            2.0,
+            (v) => setState(() => _tintB = v),
+          ),
+          _buildSlider(
+            'Warmth',
+            _warmth,
+            0.0,
+            2.0,
+            (v) => setState(() => _warmth = v),
+          ),
+          _buildSlider(
+            'Vignette',
+            _vignette,
+            0.0,
+            1.0,
+            (v) => setState(() => _vignette = v),
+          ),
         ],
       ),
     );
@@ -270,7 +377,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         children: [
           SizedBox(
             width: 70,
-            child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
           Expanded(
             child: SliderTheme(

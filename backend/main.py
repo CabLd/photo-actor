@@ -78,6 +78,7 @@ def analyze(req: AnalyzeRequest, response: Response):
         director, elapsed = analyze_frame(req.image_base64, req.intent)
         total = time.perf_counter() - t0
         logger.info("/api/analyze CharaBoard=%.3fs total=%.3fs intent=%s", elapsed, total, req.intent[:50])
+        logger.info("analyze result: %s", director.model_dump())
         response.headers["X-Response-Time-Seconds"] = f"{elapsed:.3f}"
         return director
     except Exception as e:
@@ -194,6 +195,7 @@ def analyze_with_voice(req: AnalyzeWithVoiceRequest, response: Response):
                 )
                 response.headers["X-Response-Time-Seconds"] = f"{total:.3f}"
                 response.headers["X-Response-Mock"] = "true"
+                logger.info("analyze_with_voice mock result: %s", MOCK_ANALYZE_WITH_VOICE_RESPONSE.model_dump())
                 return MOCK_ANALYZE_WITH_VOICE_RESPONSE
             try:
                 result = future.result(timeout=poll_interval)
@@ -203,6 +205,7 @@ def analyze_with_voice(req: AnalyzeWithVoiceRequest, response: Response):
         executor.shutdown(wait=False)
         total = time.perf_counter() - t0
         logger.info("/api/analyze_with_voice total=%.3fs (real)", total)
+        logger.info("analyze_with_voice result: %s", result.model_dump())
         response.headers["X-Response-Time-Seconds"] = f"{total:.3f}"
         return result
     except Exception as e:

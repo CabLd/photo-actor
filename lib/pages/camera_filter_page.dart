@@ -37,7 +37,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   bool _isAskingAi = false;
 
   static String get _apiBaseUrl {
-    return 'http://172.18.188.35:8000';
+    return 'http://172.18.188.45:8000';
   }
 
   // Shader parameters
@@ -291,7 +291,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     setState(() {
       _brightness = shader.brightness;
       _saturation = shader.saturation;
-      _contrast = shader.contrast;
+      // _contrast = shader.contrast;
       _tintR = shader.tintR;
       _tintG = shader.tintG;
       _tintB = shader.tintB;
@@ -384,7 +384,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         // Shader filter overlay (BackdropFilter applies shader to content behind)
 
         // Control panel
-        // Positioned(left: 0, right: 0, bottom: 0, child: _buildControlPanel()),
+        Positioned(left: 0, right: 0, bottom: 150, child: _buildControlPanel()),
 
         // FPS
         Positioned(top: 8, right: 8, child: _buildFpsBadge()),
@@ -570,8 +570,8 @@ class _CameraFilterPageState extends State<CameraFilterPage>
           _buildSlider(
             'Contrast',
             _contrast,
-            0.5,
-            1.5,
+            -1.0,
+            1.0,
             (v) => setState(() => _contrast = v),
           ),
           _buildSlider(

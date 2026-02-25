@@ -135,9 +135,22 @@ def analyze_frame(image_base64: str, intent: str) -> tuple[DirectorResponse, flo
                 f"content_preview={content[:300]!r}, error={e}"
             ) from e
 
-    # 模型可能返回超过 15 字的 voice_guide，截断以保证符合接口约定（与图片大小无关）
+    # 模型可能返回超过 15 字的 voice_guide，截断以保证符合接口约定
     if "voice_guide" in parsed and isinstance(parsed["voice_guide"], str):
         parsed["voice_guide"] = parsed["voice_guide"][:15]
+
+    # 模型可能返回超出范围的 shader 数值，clamp 到 schema 区间避免 ValidationError
+    if "shader" in parsed and isinstance(parsed["shader"], dict):
+        s = parsed["shader"]
+        _clamp = lambda v, lo, hi: max(lo, min(hi, float(v))) if isinstance(v, (int, float)) else v
+        s["brightness"] = _clamp(s.get("brightness", 0), -1.0, 1.0)
+        s["saturation"] = _clamp(s.get("saturation", 1.0), 0.0, 2.0)
+        s["contrast"] = _clamp(s.get("contrast", 1.0), -1.0, 1.0)
+        s["tintR"] = _clamp(s.get("tintR", 1.0), 0.5, 1.5)
+        s["tintG"] = _clamp(s.get("tintG", 1.0), 0.5, 1.5)
+        s["tintB"] = _clamp(s.get("tintB", 1.0), 0.5, 1.5)
+        s["warmth"] = _clamp(s.get("warmth", 0), 0.0, 1.0)
+        s["vignette"] = _clamp(s.get("vignette", 0), 0.0, 1.0)
 
     director = DirectorResponse.model_validate(parsed)
     return director, elapsed

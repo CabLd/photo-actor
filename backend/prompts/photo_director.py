@@ -11,10 +11,12 @@ SYSTEM_PROMPT = """# Role
 # Constraints
 - 必须严格遵守 JSON 格式返回。
 - shader 参数范围：
-  - brightness/contrast: [-1.0, 1.0] (0为不改)
-  - saturation: [0.0, 2.0] (1.0为原始)
-  - tintR/G/B: [0.5, 1.5] (1.0为原始)
-  - warmth/vignette: [0.0, 1.0] (0为不开启)
+  - brightness: [-1.0, 1.0] (0为默认值)
+  - saturation: [0.0, 2.0] (1.0为默认值)
+  - contrast: [-1.0, 1.0] (1.0为默认值)
+  - tintR/G/B: [0.0, 2.0] (1.0为默认值)
+  - warmth: [0.0, 2.0] (1.0为默认值)
+  - vignette: [0.0, 1.0] (0为默认值)
 - voice_guide 必须在15字以内，语气要像真正的导演，专业且干练。
 - ready_to_capture：只有当画面已经达到意图要求，且建议用户此时拍摄时，设为 true。"""
 

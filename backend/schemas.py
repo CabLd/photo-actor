@@ -82,10 +82,10 @@ class ShaderBlock(BaseModel):
     brightness: float = Field(..., ge=-1.0, le=1.0)
     saturation: float = Field(..., ge=0.0, le=2.0)
     contrast: float = Field(..., ge=-1.0, le=1.0)
-    tintR: float = Field(..., ge=0.5, le=1.5)
-    tintG: float = Field(..., ge=0.5, le=1.5)
-    tintB: float = Field(..., ge=0.5, le=1.5)
-    warmth: float = Field(..., ge=0.0, le=1.0)
+    tintR: float = Field(..., ge=0.5, le=2.0)
+    tintG: float = Field(..., ge=0.5, le=2.0)
+    tintB: float = Field(..., ge=0.5, le=2.0)
+    warmth: float = Field(..., ge=0.0, le=2.0)
     vignette: float = Field(..., ge=0.0, le=1.0)
 
 

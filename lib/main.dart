@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'pages/camera_filter_page.dart';
+import 'commons/filePathHelper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FilePathHelper.prepareAppDir();
   runApp(const MyApp());
 }
 
@@ -42,9 +45,7 @@ class MyHomePage extends StatelessWidget {
             FilledButton.icon(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CameraFilterPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const CameraFilterPage()),
                 );
               },
               icon: const Icon(Icons.camera_alt),

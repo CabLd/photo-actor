@@ -1,0 +1,3 @@
+[submodule "plugin/audio_helper"]
+	path = plugin/audio_helper
+	url = git@codeup.aliyun.com:5ebb5f8b8123212b59d581b4/flutter_plugin/audio_helper.git

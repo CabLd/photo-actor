@@ -1,7 +1,17 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:audio_helper/audio_helper.dart';
+import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
+
+import '../commons/filePathHelper.dart';
+import '../commons/string.dart';
+import '../manager/PermissionHelper.dart';
 
 /// Real-time camera filter research page.
 /// Uses Shader (pro_camera.frag) with ImageFilter + BackdropFilter.
@@ -20,6 +30,14 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   String? _error;
   bool _isInitialized = false;
   bool _useFrontCamera = false;
+  AudioHelper _audioHelper = AudioHelper(minRecordSeconds: 1);
+  static const int _minRecordSeconds = 1;
+  bool _isRecording = false;
+  bool _isAskingAi = false;
+
+  static String get _apiBaseUrl {
+    return 'http://172.18.188.35:8000';
+  }
 
   // Shader parameters
   double _brightness = 0.0; // -1.0 to 1.0
@@ -43,6 +61,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _audioHelper = AudioHelper(minRecordSeconds: _minRecordSeconds);
     _loadShader();
     _initCamera();
     _startFpsCounter();
@@ -51,6 +70,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _audioHelper.dispose();
     _controller?.dispose();
     super.dispose();
   }
@@ -132,6 +152,172 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     await _initCamera();
   }
 
+  /// 开始录音：使用 getChatAudioFilePathAsync 获取路径并启动录制（避免 appDocDir 未初始化导致路径为 /chat 报错）
+  Future<void> _startVoiceRecord() async {
+    if (!PermissionHelper.micPermission.isGranted) {
+      await PermissionHelper.requestMicrophonePermission(
+        Strings.requestMicrophonePermissionDenied,
+      );
+      PermissionHelper.getMicPermission();
+      return;
+    }
+    final path = FilePathHelper.getChatAudioFilePath(
+      '${DateTime.now().millisecondsSinceEpoch}.m4a',
+    );
+    if (path == null || path.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('无法创建录音文件路径，请重试')));
+      return;
+    }
+    try {
+      await _audioHelper.startRecord(path: path, config: RecordConfig());
+      if (mounted) {
+        setState(() => _isRecording = true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('开始录音失败: $e')));
+      }
+    }
+  }
+
+  /// 手势停止录音；过短时提示；通过则截帧并请求 /api/analyze_with_voice
+  Future<void> _stopVoiceRecord() async {
+    if (!_isRecording) return;
+    try {
+      final result = await _audioHelper.stopRecord();
+      if (!mounted) return;
+      setState(() => _isRecording = false);
+      if (result == null) return;
+      if (result.duration.inSeconds < _minRecordSeconds) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('录音过短，请至少录制 $_minRecordSeconds 秒')),
+        );
+        return;
+      }
+      await _captureFrameAndAskAi(result.path);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isRecording = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('停止录音失败: $e')));
+      }
+    }
+  }
+
+  /// 截取当前相机一帧（JPEG），与录音一并请求 /api/analyze_with_voice，并应用返回参数
+  Future<void> _captureFrameAndAskAi(String audioPath) async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+    setState(() => _isAskingAi = true);
+    try {
+      final imageBase64 = await _captureCurrentFrameBase64();
+      if (imageBase64 == null || imageBase64.isEmpty) {
+        if (mounted) {
+          setState(() => _isAskingAi = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('截取画面失败')));
+        }
+        return;
+      }
+      final audioBytes = await File(audioPath).readAsBytes();
+      final audioBase64 = base64Encode(audioBytes);
+
+      final response = await http.post(
+        Uri.parse('$_apiBaseUrl/api/analyze_with_voice'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'audio_base64': audioBase64,
+          'image_base64': imageBase64,
+          'audio_media_type': 'audio/mp4',
+        }),
+      );
+      print(response.body);
+
+      if (!mounted) return;
+      setState(() => _isAskingAi = false);
+
+      if (response.statusCode != 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('请求失败: ${response.statusCode} ${response.body}'),
+          ),
+        );
+        return;
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      _applyDirectorResponse(data);
+
+      final voiceB64 = data['voice_guide_audio_base64'] as String?;
+      if (voiceB64 != null && voiceB64.isNotEmpty) {
+        _playVoiceGuideAudio(voiceB64);
+      }
+
+      final guide = data['voice_guide'] as String?;
+      if (guide != null &&
+          guide.isNotEmpty &&
+          (voiceB64 == null || voiceB64.isEmpty)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(guide)));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isAskingAi = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('请求失败: $e')));
+      }
+    }
+  }
+
+  /// 截取当前预览一帧，返回 JPEG 的 Base64，失败返回 null
+  Future<String?> _captureCurrentFrameBase64() async {
+    if (_controller == null || !_controller!.value.isInitialized) return null;
+    try {
+      final xFile = await _controller!.takePicture();
+      final bytes = await xFile.readAsBytes();
+      return base64Encode(bytes);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 将 /api/analyze_with_voice 返回的 shader 等写入当前状态
+  void _applyDirectorResponse(Map<String, dynamic> data) {
+    final shader = data['shader'] as Map<String, dynamic>?;
+    if (shader == null) return;
+    setState(() {
+      _brightness = (shader['brightness'] as num?)?.toDouble() ?? _brightness;
+      _saturation = (shader['saturation'] as num?)?.toDouble() ?? _saturation;
+      _contrast = (shader['contrast'] as num?)?.toDouble() ?? _contrast;
+      _tintR = (shader['tintR'] as num?)?.toDouble() ?? _tintR;
+      _tintG = (shader['tintG'] as num?)?.toDouble() ?? _tintG;
+      _tintB = (shader['tintB'] as num?)?.toDouble() ?? _tintB;
+      _warmth = (shader['warmth'] as num?)?.toDouble() ?? _warmth;
+      _vignette = (shader['vignette'] as num?)?.toDouble() ?? _vignette;
+    });
+  }
+
+  /// 播放 voice_guide 的 TTS 音频（Base64）
+  void _playVoiceGuideAudio(String base64Audio) {
+    try {
+      final bytes = base64Decode(base64Audio);
+      final tempDir = Directory.systemTemp;
+      final file = File(
+        '${tempDir.path}/voice_guide_${DateTime.now().millisecondsSinceEpoch}.mp3',
+      );
+      file.writeAsBytesSync(bytes);
+      _audioHelper.play(url: file.path, isLocal: true);
+    } catch (_) {}
+  }
+
   void _startFpsCounter() {
     void onFrame(_) {
       if (!mounted) return;
@@ -201,16 +387,32 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         _buildCameraPreview(),
 
         // Shader filter overlay (BackdropFilter applies shader to content behind)
-        if (_shaderReady && _fragmentProgram != null) _buildShaderOverlay(),
 
         // Control panel
-        Positioned(left: 0, right: 0, bottom: 0, child: _buildControlPanel()),
+        // Positioned(left: 0, right: 0, bottom: 0, child: _buildControlPanel()),
 
         // FPS
         Positioned(top: 8, right: 8, child: _buildFpsBadge()),
 
         // 前后摄像头切换
         Positioned(top: 8, left: 8, child: _buildSwitchCameraButton()),
+
+        // 请求 AI 时的 loading
+        if (_isAskingAi)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black54,
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text('AI 分析中…', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -230,15 +432,69 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         child: Column(
           children: [
             // SizedBox(height: 200),
-            SizedBox(
-              width: previewW,
-              height: previewH,
-              child: CameraPreview(
-                _controller!,
-                key: ValueKey(_useFrontCamera),
-              ),
+            Stack(
+              children: [
+                SizedBox(
+                  width: previewW,
+                  height: previewH,
+                  child: CameraPreview(
+                    _controller!,
+                    key: ValueKey(_useFrontCamera),
+                  ),
+                ),
+                if (_shaderReady && _fragmentProgram != null)
+                  Positioned.fill(child: _buildShaderOverlay()),
+              ],
+            ),
+            Container(
+              height: 200,
+              child: Row(children: [_actionButton(), _voiceButton()]),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton() {
+    return SizedBox(
+      height: 50,
+      child: FilledButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.camera),
+        label: const Text('Take Photo'),
+      ),
+    );
+  }
+
+  Widget _voiceButton() {
+    return SizedBox(
+      width: 200,
+      height: 200,
+      child: GestureDetector(
+        onLongPressStart: (_) => _startVoiceRecord(),
+        onLongPressEnd: (_) => _stopVoiceRecord(),
+        onLongPressCancel: () => _stopVoiceRecord(),
+        child: Container(
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _isRecording ? Icons.mic : Icons.mic_none,
+                size: 48,
+                color: _isRecording ? Colors.red : Colors.white,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isRecording ? '松开发送' : '长按录音',
+                style: TextStyle(
+                  color: _isRecording ? Colors.red : Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

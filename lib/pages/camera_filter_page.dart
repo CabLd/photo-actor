@@ -18,6 +18,7 @@ import '../models/analyze_with_voice_response.dart';
 import '../models/style_template.dart';
 import '../widgets/actionButton.dart';
 import '../widgets/breathingRecordDot.dart';
+import 'captured_gallery_page.dart';
 import 'filter_library_page.dart';
 
 /// Real-time camera filter research page.
@@ -41,6 +42,8 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   static const int _minRecordSeconds = 1;
   bool _isRecording = false;
   bool _isAskingAi = false;
+  bool _isCapturing = false;
+  String? _latestCapturePath;
 
   static String get _apiBaseUrl {
     return 'http://10.249.213.118:8000';
@@ -75,6 +78,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     _audioHelper = AudioHelper(minRecordSeconds: _minRecordSeconds);
     _loadShader();
     _initCamera();
+    _refreshLatestCapturePath();
     _startFpsCounter();
   }
 
@@ -422,8 +426,34 @@ class _CameraFilterPageState extends State<CameraFilterPage>
               ),
             ),
           ),
+
+        // 拍照保存时的 loading
+        if (_isCapturing)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black38,
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text('保存中…', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
       ],
     );
+  }
+
+  void _refreshLatestCapturePath() {
+    final files = FilePathHelper.listCapturedImagesSorted();
+    final latest = files.isNotEmpty ? files.first.path : null;
+    if (!mounted) return;
+    setState(() {
+      _latestCapturePath = latest;
+    });
   }
 
   Widget _buildCameraPreview() {
@@ -471,7 +501,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildSwitchCameraButton(),
+                        _buildPicStoreEnter(),
                         _actionButton(),
                         _voiceButton(),
                       ],
@@ -489,12 +519,174 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   Widget _buildToolsBar() {
     return SizedBox(
       width: SizeConfig.screenWidth,
-      child: Row(children: [_buildFilterLibraryButton()]),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [_buildFilterLibraryButton(), _buildSwitchCameraButton()],
+      ),
     );
   }
 
   Widget _actionButton() {
-    return ActionButton(onTap: () {});
+    final canCapture =
+        !_isCapturing &&
+        !_isAskingAi &&
+        _controller != null &&
+        _controller!.value.isInitialized &&
+        _shaderReady &&
+        _fragmentProgram != null;
+    return ActionButton(
+      onTap: canCapture ? _captureFilteredPhotoAndSave : null,
+    );
+  }
+
+  Widget _buildPicStoreEnter() {
+    final borderRadius = BorderRadius.circular(10);
+    final child = _latestCapturePath == null
+        ? Icon(
+            Icons.photo,
+            color: Colors.white.withValues(alpha: 0.7),
+            size: 22,
+          )
+        : ClipRRect(
+            borderRadius: borderRadius,
+            child: Image.file(
+              File(_latestCapturePath!),
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              cacheWidth: 160,
+              errorBuilder: (_, __, ___) {
+                return Icon(
+                  Icons.broken_image,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  size: 22,
+                );
+              },
+            ),
+          );
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CapturedGalleryPage()),
+        );
+        _refreshLatestCapturePath();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.85),
+            width: 2,
+          ),
+          color: Colors.white.withValues(alpha: 0.05),
+        ),
+        alignment: Alignment.center,
+        child: child,
+      ),
+    );
+  }
+
+  ui.FragmentShader? _createConfiguredFragmentShader() {
+    final program = _fragmentProgram;
+    if (!_shaderReady || program == null) return null;
+    final shader = program.fragmentShader();
+
+    // Indices follow the order in pro_camera.frag uniforms.
+    shader.setFloat(2, _brightness);
+    shader.setFloat(3, _saturation);
+    shader.setFloat(4, _contrast);
+    shader.setFloat(5, _tintR);
+    shader.setFloat(6, _tintG);
+    shader.setFloat(7, _tintB);
+    shader.setFloat(8, _warmth);
+    shader.setFloat(9, _vignette);
+    shader.setFloat(10, _noise);
+    shader.setFloat(11, _sharpness);
+    shader.setFloat(12, _blur);
+    shader.setFloat(13, _textureStrength);
+
+    return shader;
+  }
+
+  Future<void> _captureFilteredPhotoAndSave() async {
+    if (_isCapturing) return;
+    final controller = _controller;
+    final shader = _createConfiguredFragmentShader();
+    if (controller == null ||
+        !controller.value.isInitialized ||
+        shader == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('相机或滤镜未就绪')));
+      return;
+    }
+
+    setState(() => _isCapturing = true);
+    try {
+      final xFile = await controller.takePicture();
+      final bytes = await xFile.readAsBytes();
+      try {
+        await File(xFile.path).delete();
+      } catch (_) {}
+
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final sourceImage = frame.image;
+
+      final w = sourceImage.width;
+      final h = sourceImage.height;
+      final rect = ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble());
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder, rect);
+      final paint = ui.Paint()..imageFilter = ui.ImageFilter.shader(shader);
+
+      canvas.saveLayer(rect, paint);
+      canvas.drawImage(sourceImage, ui.Offset.zero, ui.Paint());
+      canvas.restore();
+
+      final picture = recorder.endRecording();
+      final filteredImage = await picture.toImage(w, h);
+
+      final byteData = await filteredImage.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (byteData == null) {
+        throw Exception('encode failed');
+      }
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final path = FilePathHelper.getCapturedImageFilePath('capture_$now.png');
+      if (path == null || path.isEmpty) {
+        throw Exception('无法创建图片保存路径');
+      }
+      await File(path).writeAsBytes(byteData.buffer.asUint8List(), flush: true);
+
+      sourceImage.dispose();
+      filteredImage.dispose();
+
+      if (!mounted) return;
+      setState(() {
+        _latestCapturePath = path;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已保存')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isCapturing = false);
+      }
+    }
   }
 
   Widget _voiceButton() {
@@ -524,30 +716,19 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   Widget _buildSwitchCameraButton() {
     final hasMultiple = _cameras != null && _cameras!.length >= 2;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: hasMultiple ? _switchCamera : null,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Icon(
-            Icons.cameraswitch,
-            color: hasMultiple ? Colors.white : Colors.white38,
-            size: 43,
-          ),
-        ),
+    return GestureDetector(
+      onTap: hasMultiple ? _switchCamera : null,
+      child: Icon(
+        Icons.cameraswitch,
+        color: hasMultiple ? Colors.white : Colors.white38,
+        size: 32,
       ),
     );
   }
 
   /// 滤镜库按钮
   Widget _buildFilterLibraryButton() {
-    return InkWell(
+    return GestureDetector(
       onTap: _openFilterLibrary,
       child: const Icon(Icons.photo_filter, color: Colors.white, size: 35),
     );
@@ -594,21 +775,8 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   }
 
   Widget _buildShaderOverlay() {
-    final shader = _fragmentProgram!.fragmentShader();
-
-    // Uniform indices: 0,1=u_size (engine), 2=uBrightness, 3=uSaturation, 4=uContrast, 5,6,7=uTint, 8=uWarmth, 9=uVignette
-    shader.setFloat(2, _brightness);
-    shader.setFloat(3, _saturation);
-    shader.setFloat(4, _contrast);
-    shader.setFloat(5, _tintR);
-    shader.setFloat(6, _tintG);
-    shader.setFloat(7, _tintB);
-    shader.setFloat(8, _warmth);
-    shader.setFloat(9, _vignette);
-    shader.setFloat(10, _noise);
-    shader.setFloat(11, _sharpness);
-    shader.setFloat(12, _blur);
-    shader.setFloat(13, _textureStrength);
+    final shader = _createConfiguredFragmentShader();
+    if (shader == null) return const SizedBox.expand();
 
     return ClipRect(
       child: SizedBox.expand(

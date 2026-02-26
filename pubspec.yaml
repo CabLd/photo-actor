@@ -43,6 +43,7 @@ dependencies:
   audio_helper:
     path: ./plugin/audio_helper
   json_annotation: ^4.11.0
+  record: ^6.1.2
 
 dev_dependencies:
   flutter_test:

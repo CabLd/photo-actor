@@ -83,10 +83,7 @@ class TemplatesResponse {
   @JsonKey(defaultValue: 0)
   final int count;
 
-  const TemplatesResponse({
-    required this.templates,
-    required this.count,
-  });
+  const TemplatesResponse({required this.templates, required this.count});
 
   factory TemplatesResponse.fromJson(Map<String, dynamic> json) =>
       _$TemplatesResponseFromJson(json);

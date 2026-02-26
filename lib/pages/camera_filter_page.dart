@@ -49,6 +49,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     return 'http://10.249.213.118:8000';
   }
 
+  String _templateId = "default_original";
   // Shader parameters
   double _brightness = 0.0; // -1.0 to 1.0
   double _saturation = 1.0; // 0.0 to 2.0
@@ -306,6 +307,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   void _applyDirectorResponse(AnalyzeWithVoiceResponse resp) {
     final shader = resp.shader;
     setState(() {
+      _templateId = "default_original";
       _brightness = shader.brightness;
       _saturation = shader.saturation;
       // _contrast = shader.contrast;
@@ -521,7 +523,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       width: SizeConfig.screenWidth,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [_buildFilterLibraryButton(), _buildSwitchCameraButton()],
+        children: [
+          _buildFilterLibraryButton(templateId: _templateId),
+          _buildSwitchCameraButton(),
+        ],
       ),
     );
   }
@@ -727,10 +732,14 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   }
 
   /// 滤镜库按钮
-  Widget _buildFilterLibraryButton() {
+  Widget _buildFilterLibraryButton({required String templateId}) {
     return GestureDetector(
       onTap: _openFilterLibrary,
-      child: const Icon(Icons.photo_filter, color: Colors.white, size: 35),
+      child: Icon(
+        Icons.photo_filter,
+        color: templateId == "default_original" ? Colors.white : Colors.amber,
+        size: 35,
+      ),
     );
   }
 
@@ -750,6 +759,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   void _applyTemplate(StyleTemplate template) {
     setState(() {
       final shader = template.shader;
+      _templateId = template.id;
       _brightness = shader.brightness;
       _saturation = shader.saturation;
       _contrast = shader.contrast;

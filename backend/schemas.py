@@ -87,6 +87,10 @@ class ShaderBlock(BaseModel):
     tintB: float = Field(..., ge=0.5, le=2.0)
     warmth: float = Field(..., ge=0.0, le=2.0)
     vignette: float = Field(..., ge=0.0, le=1.0)
+    noise: float = Field(..., ge=0.0, le=1.0)
+    sharpness: float = Field(..., ge=0.0, le=2.0)
+    blur: float = Field(..., ge=0.0, le=1.0)
+    texture_strength: float = Field(..., ge=0.0, le=1.0)
 
 
 class DirectorResponse(BaseModel):
@@ -134,6 +138,10 @@ def get_director_response_json_schema() -> dict:
                     "tintB": {"type": "number", "description": "蓝色通道 0.5~1.5"},
                     "warmth": {"type": "number", "description": "暖色 0~1.0"},
                     "vignette": {"type": "number", "description": "暗角 0~1.0"},
+                    "noise": {"type": "number", "description": "噪点 0~1.0"},
+                    "sharpness": {"type": "number", "description": "锐度 0~2.0"},
+                    "blur": {"type": "number", "description": "模糊 0~1.0"},
+                    "texture_strength": {"type": "number", "description": "纹理强度 0~1.0"},
                 },
                 "required": [
                     "brightness",
@@ -144,6 +152,10 @@ def get_director_response_json_schema() -> dict:
                     "tintB",
                     "warmth",
                     "vignette",
+                    "noise",
+                    "sharpness",
+                    "blur",
+                    "texture_strength",
                 ],
             },
             "voice_guide": {

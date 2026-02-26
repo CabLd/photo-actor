@@ -63,6 +63,10 @@ class ShaderBlock {
     required this.tintB,
     required this.warmth,
     required this.vignette,
+    required this.noise,
+    required this.sharpness,
+    required this.blur,
+    required this.textureStrength,
   });
 
   factory ShaderBlock.fromJson(Map<String, dynamic> json) =>
@@ -78,4 +82,8 @@ class ShaderBlock {
   final double tintB;
   final double warmth;
   final double vignette;
+  final double noise;
+  final double sharpness;
+  final double blur;
+  final double textureStrength;
 }

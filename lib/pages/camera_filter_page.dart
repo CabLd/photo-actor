@@ -37,7 +37,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   bool _isAskingAi = false;
 
   static String get _apiBaseUrl {
-    return 'http://172.18.188.45:8000';
+    return 'http://192.168.124.13:8000';
   }
 
   // Shader parameters
@@ -49,6 +49,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   double _tintB = 1.0;
   double _warmth = 1.0; // 0.0 = cool, 1.0 = neutral, 2.0 = warm
   double _vignette = 0.0; // 0.0 = off, 1.0 = strong
+  double _noise = 0.0; // 0.0 = off, 1.0 = strong
+  double _sharpness = 1.0; // 0.0 = off, 1.0 = strong
+  double _blur = 0.0; // 0.0 = off, 1.0 = strong
+  double _textureStrength = 0.0; // 0.0 = off, 1.0 = strong
 
   // FPS
   int _frameCount = 0;
@@ -297,6 +301,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       _tintB = shader.tintB;
       _warmth = shader.warmth;
       _vignette = shader.vignette;
+      _noise = shader.noise;
+      _sharpness = shader.sharpness;
+      _blur = shader.blur;
+      _textureStrength = shader.textureStrength;
     });
   }
 
@@ -529,6 +537,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     shader.setFloat(7, _tintB);
     shader.setFloat(8, _warmth);
     shader.setFloat(9, _vignette);
+    shader.setFloat(10, _noise);
+    shader.setFloat(11, _sharpness);
+    shader.setFloat(12, _blur);
+    shader.setFloat(13, _textureStrength);
 
     return ClipRect(
       child: SizedBox.expand(
@@ -608,6 +620,34 @@ class _CameraFilterPageState extends State<CameraFilterPage>
             0.0,
             1.0,
             (v) => setState(() => _vignette = v),
+          ),
+          _buildSlider(
+            'Noise',
+            _noise,
+            0.0,
+            1.0,
+            (v) => setState(() => _noise = v),
+          ),
+          _buildSlider(
+            'Sharpness',
+            _sharpness,
+            0.0,
+            2.0,
+            (v) => setState(() => _sharpness = v),
+          ),
+          _buildSlider(
+            'Blur',
+            _blur,
+            0.0,
+            1.0,
+            (v) => setState(() => _blur = v),
+          ),
+          _buildSlider(
+            'Texture Strength',
+            _textureStrength,
+            0.0,
+            1.0,
+            (v) => setState(() => _textureStrength = v),
           ),
         ],
       ),

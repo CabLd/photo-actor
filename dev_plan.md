@@ -113,7 +113,7 @@ Response (严格 JSON):
     "tintG": 0.95,
     "tintB": 1.2,
     "warmth": 0.6,
-    "vignette": 0.4
+    "vignette": 0.4 
   },
   "voice_guide": "镜头往左移一点，避开路灯",
   "ready_to_capture": false

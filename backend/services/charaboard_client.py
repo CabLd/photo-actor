@@ -151,6 +151,10 @@ def analyze_frame(image_base64: str, intent: str) -> tuple[DirectorResponse, flo
         s["tintB"] = _clamp(s.get("tintB", 1.0), 0.5, 1.5)
         s["warmth"] = _clamp(s.get("warmth", 0), 0.0, 1.0)
         s["vignette"] = _clamp(s.get("vignette", 0), 0.0, 1.0)
+        s["noise"] = _clamp(s.get("noise", 0), 0.0, 1.0)
+        s["sharpness"] = _clamp(s.get("sharpness", 1.0), 0.0, 2.0)
+        s["blur"] = _clamp(s.get("blur", 0), 0.0, 1.0)
+        s["texture_strength"] = _clamp(s.get("texture_strength", 0), 0.0, 1.0)
 
     director = DirectorResponse.model_validate(parsed)
     return director, elapsed

@@ -52,6 +52,10 @@ ShaderBlock _$ShaderBlockFromJson(Map<String, dynamic> json) => ShaderBlock(
   tintB: (json['tintB'] as num).toDouble(),
   warmth: (json['warmth'] as num).toDouble(),
   vignette: (json['vignette'] as num).toDouble(),
+  noise: (json['noise'] as num).toDouble(),
+  sharpness: (json['sharpness'] as num).toDouble(),
+  blur: (json['blur'] as num).toDouble(),
+  textureStrength: (json['texture_strength'] as num).toDouble(),
 );
 
 Map<String, dynamic> _$ShaderBlockToJson(ShaderBlock instance) =>
@@ -64,4 +68,8 @@ Map<String, dynamic> _$ShaderBlockToJson(ShaderBlock instance) =>
       'tintB': instance.tintB,
       'warmth': instance.warmth,
       'vignette': instance.vignette,
+      'noise': instance.noise,
+      'sharpness': instance.sharpness,
+      'blur': instance.blur,
+      'texture_strength': instance.textureStrength,
     };

@@ -16,7 +16,7 @@ import '../commons/string.dart';
 import '../manager/PermissionHelper.dart';
 import '../models/analyze_with_voice_response.dart';
 import '../models/style_template.dart';
-import '../storage/capture_store.dart';
+import '../storage/filter_repository.dart';
 import '../widgets/actionButton.dart';
 import '../widgets/breathingRecordDot.dart';
 import 'captured_gallery_page.dart';
@@ -695,12 +695,14 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       sourceImage.dispose();
       filteredImage.dispose();
 
-      await CaptureStore.saveCaptureMeta(
-        imagePath: path,
-        createdAtMs: now,
-        template: _currentTemplate,
-        currentParams: _currentShaderParamsSnapshot(),
-      );
+      if (_currentTemplate == null) {
+        await FilterRepository.upsertLocalTemplateFromParams(
+          _currentShaderParamsSnapshot(),
+          thumbnailPath: path,
+        );
+      } else {
+        await FilterRepository.touchTemplate(_currentTemplate!.id);
+      }
 
       if (!mounted) return;
       setState(() {

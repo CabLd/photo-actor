@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/style_template.dart';
-import '../storage/template_cache.dart';
+import '../storage/filter_repository.dart';
 
 /// 滤镜库页面
 class FilterLibraryPage extends StatefulWidget {
@@ -31,7 +31,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
 
     try {
       setState(() {
-        _templates = TemplateCache.loadCachedTemplates();
+        _templates = FilterRepository.loadAllTemplates();
         _applyFilter();
         _isLoading = false;
       });

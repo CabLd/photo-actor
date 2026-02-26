@@ -3,15 +3,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'pages/camera_filter_page.dart';
 import 'commons/filePathHelper.dart';
-import 'storage/template_cache.dart';
+import 'storage/filter_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  await Hive.openBox<String>('template_cache');
-  await Hive.openBox<String>('capture_meta');
+  await Hive.openBox<String>(FilterRepository.boxName);
   await FilePathHelper.prepareAppDir();
-  await TemplateCache.attemptInitialFetchOnce();
+  await FilterRepository.attemptInitialRemoteFetchOnce();
   runApp(const MyApp());
 }
 

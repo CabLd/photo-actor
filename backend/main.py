@@ -30,6 +30,7 @@ from schemas import (
 from services.charaboard_client import analyze_frame
 from services.speech_to_text import transcribe_audio
 from services.text_to_speech import text_to_speech, VOICE_ID_ZH_FEMALE
+from style_templates import get_all_templates, get_template_by_id, search_templates_by_tag
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -212,3 +213,51 @@ def analyze_with_voice(req: AnalyzeWithVoiceRequest, response: Response):
         executor.shutdown(wait=False)
         logger.exception("analyze_with_voice failed: %s", e)
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@app.get("/api/templates")
+def get_templates(tag: str | None = None):
+    """
+    获取所有预设风格模板。
+
+    Query Parameters:
+    - tag: 可选，根据标签过滤模板（如 "复古", "电影", "黑白" 等）
+
+    Returns:
+    - 风格模板列表，每个模板包含 id, name, description, shader 参数等
+    """
+    try:
+        if tag:
+            templates = search_templates_by_tag(tag)
+            logger.info("/api/templates tag=%s count=%d", tag, len(templates))
+        else:
+            templates = get_all_templates()
+            logger.info("/api/templates count=%d", len(templates))
+        return {"templates": templates, "count": len(templates)}
+    except Exception as e:
+        logger.exception("get_templates failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/templates/{template_id}")
+def get_template(template_id: str):
+    """
+    根据 ID 获取单个风格模板。
+
+    Path Parameters:
+    - template_id: 模板 ID（如 "vintage", "wong_kar_wai", "dreamy" 等）
+
+    Returns:
+    - 单个风格模板详情
+    """
+    try:
+        template = get_template_by_id(template_id)
+        if not template:
+            raise HTTPException(status_code=404, detail=f"Template '{template_id}' not found")
+        logger.info("/api/templates/%s", template_id)
+        return template
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("get_template failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))

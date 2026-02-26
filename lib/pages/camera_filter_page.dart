@@ -15,8 +15,10 @@ import '../commons/sizeConfig.dart';
 import '../commons/string.dart';
 import '../manager/PermissionHelper.dart';
 import '../models/analyze_with_voice_response.dart';
+import '../models/style_template.dart';
 import '../widgets/actionButton.dart';
 import '../widgets/breathingRecordDot.dart';
+import 'filter_library_page.dart';
 
 /// Real-time camera filter research page.
 /// Uses Shader (pro_camera.frag) with ImageFilter + BackdropFilter.
@@ -41,7 +43,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   bool _isAskingAi = false;
 
   static String get _apiBaseUrl {
-    return 'http://192.168.124.13:8000';
+    return 'http://10.249.213.118:8000';
   }
 
   // Shader parameters
@@ -404,8 +406,8 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         // FPS
         // Positioned(top: 8, right: 8, child: _buildFpsBadge()),
 
-        // 前后摄像头切换
-        // Positioned(top: 8, left: 8, child: _buildSwitchCameraButton()),
+        // 滤镜库按钮（左上角）
+        Positioned(top: 48, left: 16, child: _buildFilterLibraryButton()),
 
         // 请求 AI 时的 loading
         if (_isAskingAi)
@@ -534,6 +536,83 @@ class _CameraFilterPageState extends State<CameraFilterPage>
             size: 43,
           ),
         ),
+      ),
+    );
+  }
+
+  /// 滤镜库按钮
+  Widget _buildFilterLibraryButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _openFilterLibrary,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.photo_filter, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              const Text(
+                '滤镜库',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 打开滤镜库并应用选中的滤镜
+  Future<void> _openFilterLibrary() async {
+    final selectedTemplate = await Navigator.push<StyleTemplate>(
+      context,
+      MaterialPageRoute(builder: (context) => const FilterLibraryPage()),
+    );
+
+    if (selectedTemplate != null) {
+      _applyTemplate(selectedTemplate);
+    }
+  }
+
+  /// 应用滤镜模板
+  void _applyTemplate(StyleTemplate template) {
+    setState(() {
+      final shader = template.shader;
+      _brightness = shader.brightness;
+      _saturation = shader.saturation;
+      _contrast = shader.contrast;
+      _tintR = shader.tintR;
+      _tintG = shader.tintG;
+      _tintB = shader.tintB;
+      _warmth = shader.warmth;
+      _vignette = shader.vignette;
+      _noise = shader.noise;
+      _sharpness = shader.sharpness;
+      _blur = shader.blur;
+      _textureStrength = shader.textureStrength;
+    });
+
+    // 显示提示
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已应用「${template.name}」滤镜'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.black.withValues(alpha: 0.8),
       ),
     );
   }

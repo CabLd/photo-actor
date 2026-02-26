@@ -39,7 +39,7 @@ SYSTEM_PROMPT = """# Role
   - saturation: 0.8  
   - contrast: -0.3  
   - tintR: 1.1  
-  - tintG: 0.9  
+  - tintG: 0.9
   - tintB: 0.9  
   - warmth: 1.3  
   - vignette: 0.2  

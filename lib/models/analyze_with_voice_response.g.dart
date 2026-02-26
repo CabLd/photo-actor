@@ -55,7 +55,7 @@ ShaderBlock _$ShaderBlockFromJson(Map<String, dynamic> json) => ShaderBlock(
   noise: (json['noise'] as num).toDouble(),
   sharpness: (json['sharpness'] as num).toDouble(),
   blur: (json['blur'] as num).toDouble(),
-  textureStrength: (json['texture_strength'] as num).toDouble(),
+  textureStrength: (json['textureStrength'] as num).toDouble(),
 );
 
 Map<String, dynamic> _$ShaderBlockToJson(ShaderBlock instance) =>
@@ -71,5 +71,5 @@ Map<String, dynamic> _$ShaderBlockToJson(ShaderBlock instance) =>
       'noise': instance.noise,
       'sharpness': instance.sharpness,
       'blur': instance.blur,
-      'texture_strength': instance.textureStrength,
+      'textureStrength': instance.textureStrength,
     };

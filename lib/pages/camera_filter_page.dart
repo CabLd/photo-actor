@@ -5,14 +5,18 @@ import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:audio_helper/audio_helper.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 import '../commons/filePathHelper.dart';
+import '../commons/sizeConfig.dart';
 import '../commons/string.dart';
 import '../manager/PermissionHelper.dart';
 import '../models/analyze_with_voice_response.dart';
+import '../widgets/actionButton.dart';
+import '../widgets/breathingRecordDot.dart';
 
 /// Real-time camera filter research page.
 /// Uses Shader (pro_camera.frag) with ImageFilter + BackdropFilter.
@@ -177,6 +181,9 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       return;
     }
     try {
+      HapticFeedback.lightImpact().then((value) {
+        HapticFeedback.lightImpact();
+      });
       await _audioHelper.startRecord(path: path, config: RecordConfig());
       if (mounted) {
         setState(() => _isRecording = true);
@@ -392,13 +399,13 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         // Shader filter overlay (BackdropFilter applies shader to content behind)
 
         // Control panel
-        Positioned(left: 0, right: 0, bottom: 150, child: _buildControlPanel()),
+        // Positioned(left: 0, right: 0, bottom: 150, child: _buildControlPanel()),
 
         // FPS
-        Positioned(top: 8, right: 8, child: _buildFpsBadge()),
+        // Positioned(top: 8, right: 8, child: _buildFpsBadge()),
 
         // 前后摄像头切换
-        Positioned(top: 8, left: 8, child: _buildSwitchCameraButton()),
+        // Positioned(top: 8, left: 8, child: _buildSwitchCameraButton()),
 
         // 请求 AI 时的 loading
         if (_isAskingAi)
@@ -448,9 +455,30 @@ class _CameraFilterPageState extends State<CameraFilterPage>
                   Positioned.fill(child: _buildShaderOverlay()),
               ],
             ),
-            Container(
-              height: 200,
-              child: Row(children: [_actionButton(), _voiceButton()]),
+            SizedBox(
+              width: SizeConfig.screenWidth,
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: _isRecording
+                        ? BreathingRecordDot()
+                        : const SizedBox.shrink(),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildSwitchCameraButton(),
+                        _actionButton(),
+                        _voiceButton(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -459,44 +487,29 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   }
 
   Widget _actionButton() {
-    return SizedBox(
-      height: 50,
-      child: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.camera),
-        label: const Text('Take Photo'),
-      ),
-    );
+    return ActionButton(onTap: () {});
   }
 
   Widget _voiceButton() {
-    return SizedBox(
-      width: 200,
-      height: 200,
-      child: GestureDetector(
-        onLongPressStart: (_) => _startVoiceRecord(),
-        onLongPressEnd: (_) => _stopVoiceRecord(),
-        onLongPressCancel: () => _stopVoiceRecord(),
-        child: Container(
-          alignment: Alignment.center,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _isRecording ? Icons.mic : Icons.mic_none,
-                size: 48,
-                color: _isRecording ? Colors.red : Colors.white,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _isRecording ? '松开发送' : '长按录音',
-                style: TextStyle(
-                  color: _isRecording ? Colors.red : Colors.white70,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
+    return GestureDetector(
+      onLongPressStart: (_) => _startVoiceRecord(),
+      onLongPressEnd: (_) => _stopVoiceRecord(),
+      onLongPressCancel: () => _stopVoiceRecord(),
+      child: Container(
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.mic_none, size: 50, color: Colors.white),
+            // const SizedBox(height: 8),
+            // Text(
+            //   _isRecording ? '松开发送' : '长按录音',
+            //   style: TextStyle(
+            //     color: _isRecording ? Colors.red : Colors.white70,
+            //     fontSize: 14,
+            //   ),
+            // ),
+          ],
         ),
       ),
     );
@@ -518,7 +531,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
           child: Icon(
             Icons.cameraswitch,
             color: hasMultiple ? Colors.white : Colors.white38,
-            size: 28,
+            size: 43,
           ),
         ),
       ),

@@ -14,7 +14,12 @@ from config import (
     X_PLATFORM_ID,
     X_QUALITY,
 )
-from schemas import DirectorResponse, get_director_response_json_schema
+from schemas import (
+    GAZE_DIRECTION_VALUES,
+    POSE_TYPE_VALUES,
+    DirectorResponse,
+    get_director_response_json_schema,
+)
 
 
 def _build_messages_with_image(image_base64: str, intent: str) -> list[dict[str, Any]]:
@@ -135,9 +140,19 @@ def analyze_frame(image_base64: str, intent: str) -> tuple[DirectorResponse, flo
                 f"content_preview={content[:300]!r}, error={e}"
             ) from e
 
-    # 模型可能返回超过 15 字的 voice_guide，截断以保证符合接口约定
+    # voice_guide 长度限制 300 字（1～3 句话）
     if "voice_guide" in parsed and isinstance(parsed["voice_guide"], str):
-        parsed["voice_guide"] = parsed["voice_guide"][:15]
+        parsed["voice_guide"] = parsed["voice_guide"][:300]
+
+    # pose_guide 可选：缺失或非对象时置为 None；存在时校验 pose_type/gaze_direction 落在枚举内，非法置为 "无"
+    if "pose_guide" not in parsed or not isinstance(parsed.get("pose_guide"), dict):
+        parsed["pose_guide"] = None
+    else:
+        pg = parsed["pose_guide"]
+        pg["pose_type"] = pg.get("pose_type") if pg.get("pose_type") in POSE_TYPE_VALUES else "无"
+        pg["gaze_direction"] = (
+            pg.get("gaze_direction") if pg.get("gaze_direction") in GAZE_DIRECTION_VALUES else "无"
+        )
 
     # 模型可能返回超出范围的 shader 数值，clamp 到 schema 区间避免 ValidationError
     if "shader" in parsed and isinstance(parsed["shader"], dict):

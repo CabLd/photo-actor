@@ -93,13 +93,26 @@ class ShaderBlock(BaseModel):
     texture_strength: float = Field(..., ge=0.0, le=1.0)
 
 
+# 姿势指导语义枚举，供 pose_guide 与客户端绘制使用
+POSE_TYPE_VALUES = ("正面", "侧身", "微侧", "背身", "抬手", "无")
+GAZE_DIRECTION_VALUES = ("正前", "左", "右", "左上", "左下", "右上", "右下", "无")
+
+
+class PoseGuideBlock(BaseModel):
+    """仅当有人且需要动作指导时输出；无人或不需要时省略或设为 null。"""
+
+    pose_type: str = Field(default="无", description="姿势类型")
+    gaze_direction: str = Field(default="无", description="视线方向")
+
+
 class DirectorResponse(BaseModel):
     """Exact shape returned by AI and by our /api/analyze."""
 
     analysis: AnalysisBlock
     shader: ShaderBlock
-    voice_guide: str = Field(..., max_length=15)
+    voice_guide: str = Field(..., max_length=300, description="1～3 句话；有人物时含姿势指导，无人则简短建议；用于 TTS")
     ready_to_capture: bool
+    pose_guide: PoseGuideBlock | None = Field(default=None, description="姿势与视线语义，仅有人且需指导时返回")
 
 
 class AnalyzeWithVoiceResponse(DirectorResponse):
@@ -160,12 +173,28 @@ def get_director_response_json_schema() -> dict:
             },
             "voice_guide": {
                 "type": "string",
-                "description": "15字以内导演语音指导",
-                "maxLength": 15,
+                "description": "1～3 句话导演语音指导；有人物时含姿势指导，无人则简短建议",
+                "maxLength": 300,
             },
             "ready_to_capture": {
                 "type": "boolean",
                 "description": "是否建议用户此时拍摄",
+            },
+            "pose_guide": {
+                "type": "object",
+                "description": "仅当有人且需要动作指导时输出；无人时省略或 null",
+                "properties": {
+                    "pose_type": {
+                        "type": "string",
+                        "enum": ["正面", "侧身", "微侧", "背身", "抬手", "无"],
+                        "description": "姿势类型，无表示不给出姿势建议",
+                    },
+                    "gaze_direction": {
+                        "type": "string",
+                        "enum": ["正前", "左", "右", "左上", "左下", "右上", "右下", "无"],
+                        "description": "视线方向",
+                    },
+                },
             },
         },
         "required": ["analysis", "shader", "voice_guide", "ready_to_capture"],

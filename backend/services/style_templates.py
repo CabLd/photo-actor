@@ -1,25 +1,25 @@
-"""预设风格模板配置"""
+"""Preset style template configuration"""
 
 from typing import TypedDict
 
 
 class StyleTemplate(TypedDict):
-    """单个风格模板"""
+    """Single style template"""
 
     id: str
     name: str
     description: str
-    thumbnail: str  # 缩略图 URL 或路径
+    thumbnail: str  # Thumbnail URL or path
     shader: dict[str, float]
     tags: list[str]
 
 
-# 10 个预设风格模板
+# 10 preset style templates
 STYLE_TEMPLATES: list[StyleTemplate] = [
       {
         "id": "default_original",
-        "name": "默认原图",
-        "description": "默认原图，不进行任何处理",
+        "name": "Original",
+        "description": "Default original image, no processing applied",
         "thumbnail": "/assets/templates/vintage.jpg",
         "shader": {
             "brightness": 0.0,
@@ -35,12 +35,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.0,
             "texture_strength": 0.0
         },
-        "tags": ["复古", "怀旧", "温暖", "胶片"],
+        "tags": ["original", "default", "neutral", "clean"],
     },
     {
         "id": "vintage",
-        "name": "复古风格",
-        "description": "高对比度、温暖色调、低饱和度、轻微噪点，模仿老式相机效果",
+        "name": "Vintage",
+        "description": "High contrast, warm tones, low saturation, slight noise, mimicking old camera effects",
         "thumbnail": "/assets/templates/vintage.jpg",
         "shader": {
             "brightness": 0.05,
@@ -56,12 +56,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.15,
             "texture_strength": 0.60
         },
-        "tags": ["复古", "怀旧", "温暖", "胶片"],
+        "tags": ["vintage", "retro", "warm", "film"],
     },
     {
         "id": "wong_kar_wai",
-        "name": "王家卫风格",
-        "description": "电影感、高对比度、冷色调、深沉阴影",
+        "name": "Wong Kar-wai",
+        "description": "Cinematic feel, high contrast, cool tones, deep shadows",
         "thumbnail": "/assets/templates/wong_kar_wai.jpg",
         "shader": {
             "brightness": -0.15,
@@ -77,12 +77,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.05,
             "texture_strength": 0.40
         },
-        "tags": ["电影", "文艺", "冷色调", "深沉"],
+        "tags": ["cinematic", "artistic", "cool", "moody"],
     },
     {
         "id": "dreamy",
-        "name": "梦幻风格",
-        "description": "柔和光线、低对比度、轻微的色调渲染、模糊背景",
+        "name": "Dreamy",
+        "description": "Soft lighting, low contrast, subtle color grading, blurred background",
         "thumbnail": "/assets/templates/dreamy.jpg",
         "shader": {
            "brightness": 0.25,
@@ -98,12 +98,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.40,
             "texture_strength": 0.10
         },
-        "tags": ["梦幻", "柔和", "朦胧", "浪漫"],
+        "tags": ["dreamy", "soft", "hazy", "romantic"],
     },
     {
         "id": "modern_minimal",
-        "name": "现代极简",
-        "description": "高亮度、适中的饱和度和对比度，简洁而鲜明的色彩",
+        "name": "Modern Minimal",
+        "description": "High brightness, moderate saturation and contrast, clean and vivid colors",
         "thumbnail": "/assets/templates/modern_minimal.jpg",
         "shader": {
             "brightness": 0.20,
@@ -119,12 +119,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.00,
             "texture_strength": 0.00
         },
-        "tags": ["现代", "极简", "清晰", "明亮"],
+        "tags": ["modern", "minimal", "crisp", "bright"],
     },
     {
         "id": "black_white",
-        "name": "黑白风格",
-        "description": "强对比度、零饱和度、极简黑白效果，突出阴影和光线",
+        "name": "Black & White",
+        "description": "Strong contrast, zero saturation, minimalist black and white effect, emphasizing shadows and light",
         "thumbnail": "/assets/templates/black_white.jpg",
         "shader": {
             "brightness": -0.05,
@@ -140,12 +140,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.00,
             "texture_strength": 0.45
         },
-        "tags": ["黑白", "经典", "艺术", "对比"],
+        "tags": ["black-white", "classic", "artistic", "contrast"],
     },
     {
         "id": "sunset",
-        "name": "日落风格",
-        "description": "增强温暖色调、红色和黄色调，模拟日落效果",
+        "name": "Sunset",
+        "description": "Enhanced warm tones, red and yellow hues, simulating sunset effect",
         "thumbnail": "/assets/templates/sunset.jpg",
         "shader": {
             "brightness": 0.10,
@@ -161,12 +161,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.15,
             "texture_strength": 0.20
         },
-        "tags": ["日落", "温暖", "浪漫", "金色"],
+        "tags": ["sunset", "warm", "romantic", "golden"],
     },
     {
         "id": "film",
-        "name": "复古胶片",
-        "description": "低对比度、轻微的噪点和纹理，模拟老胶片效果",
+        "name": "Vintage Film",
+        "description": "Low contrast, slight noise and texture, simulating old film effect",
         "thumbnail": "/assets/templates/film.jpg",
         "shader": {
             "brightness": -0.2,
@@ -182,12 +182,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.1,
             "texture_strength": 0.7,
         },
-        "tags": ["胶片", "复古", "纹理", "颗粒"],
+        "tags": ["film", "vintage", "texture", "grain"],
     },
     {
         "id": "urban_night",
-        "name": "都市夜景",
-        "description": "高对比度、冷色调，突出夜景的光线效果",
+        "name": "Urban Night",
+        "description": "High contrast, cool tones, emphasizing night scene lighting effects",
         "thumbnail": "/assets/templates/urban_night.jpg",
         "shader": {
             "brightness": 0.0,
@@ -203,12 +203,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.0,
             "texture_strength": 0.2,
         },
-        "tags": ["夜景", "都市", "冷色", "霓虹"],
+        "tags": ["night", "urban", "cool", "neon"],
     },
     {
         "id": "pastel",
-        "name": "粉彩风格",
-        "description": "柔和的色调和较低的对比度，适合轻松的氛围",
+        "name": "Pastel",
+        "description": "Soft tones and lower contrast, suitable for relaxed atmosphere",
         "thumbnail": "/assets/templates/pastel.jpg",
         "shader": {
             "brightness": 0.35,
@@ -224,12 +224,12 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.25,
             "texture_strength": 0.15
         },
-        "tags": ["粉彩", "少女", "柔和", "清新"],
+        "tags": ["pastel", "feminine", "soft", "fresh"],
     },
     {
         "id": "cool",
-        "name": "冷酷风格",
-        "description": "低饱和度、冷色调、强对比度，营造冷静的氛围",
+        "name": "Cool",
+        "description": "Low saturation, cool tones, strong contrast, creating a calm atmosphere",
         "thumbnail": "/assets/templates/cool.jpg",
         "shader": {
             "brightness": -0.1,
@@ -245,18 +245,18 @@ STYLE_TEMPLATES: list[StyleTemplate] = [
             "blur": 0.0,
             "texture_strength": 0.4,
         },
-        "tags": ["冷酷", "冷色", "高级", "沉稳"],
+        "tags": ["cool", "cold", "sophisticated", "calm"],
     },
 ]
 
 
 def get_all_templates() -> list[StyleTemplate]:
-    """获取所有风格模板"""
+    """Get all style templates"""
     return STYLE_TEMPLATES
 
 
 def get_template_by_id(template_id: str) -> StyleTemplate | None:
-    """根据 ID 获取单个模板"""
+    """Get a single template by ID"""
     for template in STYLE_TEMPLATES:
         if template["id"] == template_id:
             return template
@@ -264,5 +264,5 @@ def get_template_by_id(template_id: str) -> StyleTemplate | None:
 
 
 def search_templates_by_tag(tag: str) -> list[StyleTemplate]:
-    """根据标签搜索模板"""
+    """Search templates by tag"""
     return [t for t in STYLE_TEMPLATES if tag in t["tags"]]

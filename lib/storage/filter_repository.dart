@@ -8,7 +8,8 @@ import '../services/template_service.dart';
 class FilterRepository {
   static const String boxName = 'filters';
 
-  static const String _keyDidAttemptInitialFetch = 'meta:did_attempt_initial_fetch';
+  static const String _keyDidAttemptInitialFetch =
+      'meta:did_attempt_initial_fetch';
 
   static const String _keyPrefixTemplate = 'tpl:';
   static const String _keyPrefixSource = 'meta:source:';
@@ -133,8 +134,8 @@ class FilterRepository {
 
     final template = StyleTemplate(
       id: id,
-      name: '自定义滤镜',
-      description: '本地保存 $y-$m-$d $hh:$mm',
+      name: 'Custom Filter',
+      description: 'Local saved $y-$m-$d $hh:$mm',
       thumbnail: thumbnailPath ?? '',
       shader: params,
       tags: const ['local'],
@@ -159,4 +160,3 @@ class _TemplateWithMeta {
   final String source;
   final int updatedAtMs;
 }
-

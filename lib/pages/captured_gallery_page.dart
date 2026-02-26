@@ -49,7 +49,7 @@ class _CapturedGalleryPageState extends State<CapturedGalleryPage> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('相册', style: TextStyle(color: Colors.white)),
+        title: const Text('Gallery', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -67,7 +67,7 @@ class _CapturedGalleryPageState extends State<CapturedGalleryPage> {
     if (_files.isEmpty) {
       return Center(
         child: Text(
-          '暂无已保存照片',
+          'No saved photos',
           style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
         ),
       );

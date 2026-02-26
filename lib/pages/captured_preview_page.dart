@@ -57,7 +57,7 @@ class _CapturedPreviewPageState extends State<CapturedPreviewPage> {
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) {
                           return Text(
-                            '图片加载失败',
+                            'Failed to load image',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.7),
                             ),

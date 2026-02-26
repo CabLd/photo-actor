@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/style_template.dart';
 import '../storage/filter_repository.dart';
 
-/// 滤镜库页面
+/// Filter library page
 class FilterLibraryPage extends StatefulWidget {
   const FilterLibraryPage({super.key});
 
@@ -68,7 +68,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('滤镜库', style: TextStyle(color: Colors.white)),
+        title: const Text('Filter Library', style: TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -76,13 +76,13 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
       ),
       body: Column(
         children: [
-          // 搜索框
+          // Search box
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: '搜索滤镜...',
+                hintText: 'Search filters...',
                 hintStyle: TextStyle(
                   color: Colors.white.withValues(alpha: 0.5),
                 ),
@@ -105,7 +105,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
 
           const SizedBox(height: 16),
 
-          // 模板列表
+          // Template list
           Expanded(child: _buildContent()),
         ],
       ),
@@ -127,7 +127,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 16),
             Text(
-              '加载失败',
+              'Failed to load',
               style: const TextStyle(color: Colors.white, fontSize: 18),
             ),
             const SizedBox(height: 8),
@@ -139,7 +139,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _loadTemplates,
-              child: const Text('刷新本地缓存'),
+              child: const Text('Refresh local cache'),
             ),
           ],
         ),
@@ -159,7 +159,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                '暂无本地滤镜',
+                'No local filters',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
               ),
             ],
@@ -177,7 +177,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '没有找到匹配的滤镜',
+              'No matching filters found',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
             ),
           ],
@@ -219,7 +219,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 缩略图占位符
+            // Thumbnail placeholder
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -238,7 +238,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
               ),
             ),
 
-            // 模板信息
+            // Template info
             Padding(
               padding: const EdgeInsets.all(12),
               child: Column(

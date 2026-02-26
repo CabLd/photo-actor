@@ -199,9 +199,13 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     );
     if (path == null || path.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('无法创建录音文件路径，请重试')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Failed to create recording file path, please try again',
+          ),
+        ),
+      );
       return;
     }
     try {
@@ -216,7 +220,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('开始录音失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('Start recording failed: $e')));
       }
     }
   }
@@ -280,7 +284,9 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       if (response.statusCode != 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('请求失败: ${response.statusCode} ${response.body}'),
+            content: Text(
+              'Request failed: ${response.statusCode} ${response.body}',
+            ),
           ),
         );
         return;
@@ -303,7 +309,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         setState(() => _isAskingAi = false);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('请求失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('Request failed: $e')));
       }
     }
   }
@@ -441,7 +447,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
                 children: [
                   CircularProgressIndicator(color: Colors.white),
                   SizedBox(height: 16),
-                  Text('AI 分析中…', style: TextStyle(color: Colors.white)),
+                  Text(
+                    'AI analyzing...',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ],
               ),
             ),
@@ -458,7 +467,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
                 children: [
                   CircularProgressIndicator(color: Colors.white),
                   SizedBox(height: 16),
-                  Text('保存中…', style: TextStyle(color: Colors.white)),
+                  Text('Saving...', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -691,9 +700,9 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         !controller.value.isInitialized ||
         shader == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('相机或滤镜未就绪')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Camera or filter not ready')),
+      );
       return;
     }
 
@@ -734,7 +743,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       final now = DateTime.now().millisecondsSinceEpoch;
       final path = FilePathHelper.getCapturedImageFilePath('capture_$now.png');
       if (path == null || path.isEmpty) {
-        throw Exception('无法创建图片保存路径');
+        throw Exception('Failed to create image save path');
       }
       await File(path).writeAsBytes(byteData.buffer.asUint8List(), flush: true);
 
@@ -756,12 +765,12 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('已保存')));
+      ).showSnackBar(const SnackBar(content: Text('Saved')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
     } finally {
       if (mounted) {
         setState(() => _isCapturing = false);
@@ -853,7 +862,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     // 显示提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已应用「${template.name}」滤镜'),
+        content: Text('Applied "${template.name}" filter'),
         duration: const Duration(seconds: 2),
         backgroundColor: Colors.black.withValues(alpha: 0.8),
       ),

@@ -16,6 +16,27 @@ class StyleTemplate(TypedDict):
 
 # 10 个预设风格模板
 STYLE_TEMPLATES: list[StyleTemplate] = [
+      {
+        "id": "default_original",
+        "name": "默认原图",
+        "description": "默认原图，不进行任何处理",
+        "thumbnail": "/assets/templates/vintage.jpg",
+        "shader": {
+            "brightness": 0.0,
+            "saturation": 1.0,
+            "contrast": 1.0,
+            "tintR": 1.0,
+            "tintG": 1.0,
+            "tintB": 1.0,
+            "warmth": 1.0,
+            "vignette": 0.0,
+            "noise": 0.0,
+            "sharpness": 1.0,
+            "blur": 0.0,
+            "texture_strength": 0.0
+        },
+        "tags": ["复古", "怀旧", "温暖", "胶片"],
+    },
     {
         "id": "vintage",
         "name": "复古风格",

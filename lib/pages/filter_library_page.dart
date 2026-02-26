@@ -1,6 +1,8 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/style_template.dart';
 import '../storage/filter_repository.dart';
+import '../services/filter_preview_service.dart';
 
 /// Filter library page
 class FilterLibraryPage extends StatefulWidget {
@@ -16,11 +18,38 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
   bool _isLoading = true;
   String? _error;
   String _searchQuery = '';
+  ui.Image? _demoSourceImage;
+  final Map<String, ui.Image> _previewCache = {};
 
   @override
   void initState() {
     super.initState();
+    _loadDemoImage();
     _loadTemplates();
+  }
+
+  @override
+  void dispose() {
+    _demoSourceImage?.dispose();
+    for (final image in _previewCache.values) {
+      image.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadDemoImage() async {
+    try {
+      final image = await FilterPreviewService.loadImageFromAsset(
+        'lib/assets/image.png',
+      );
+      if (mounted) {
+        setState(() {
+          _demoSourceImage = image;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load demo image: $e');
+    }
   }
 
   Future<void> _loadTemplates() async {
@@ -30,6 +59,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
     });
 
     try {
+      await FilterPreviewService.initialize();
       setState(() {
         _templates = FilterRepository.loadAllTemplates();
         _applyFilter();
@@ -40,6 +70,27 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<ui.Image?> _getPreviewImage(StyleTemplate template) async {
+    if (_demoSourceImage == null) return null;
+
+    // Check cache first
+    if (_previewCache.containsKey(template.id)) {
+      return _previewCache[template.id];
+    }
+
+    try {
+      final preview = await FilterPreviewService.generatePreview(
+        sourceImage: _demoSourceImage!,
+        template: template,
+      );
+      _previewCache[template.id] = preview;
+      return preview;
+    } catch (e) {
+      debugPrint('Failed to generate preview for ${template.id}: $e');
+      return null;
     }
   }
 
@@ -68,7 +119,10 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Filter Library', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Filter Library',
+          style: TextStyle(color: Colors.white),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -204,7 +258,6 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
   Widget _buildTemplateCard(StyleTemplate template) {
     return GestureDetector(
       onTap: () {
-        // 返回选中的模板
         Navigator.pop(context, template);
       },
       child: Container(
@@ -219,21 +272,51 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail placeholder
+            // Preview image
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
                 ),
-                child: Center(
-                  child: Icon(
-                    Icons.photo_filter,
-                    size: 48,
-                    color: Colors.white.withValues(alpha: 0.3),
-                  ),
+                child: FutureBuilder<ui.Image?>(
+                  future: _getPreviewImage(template),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Container(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return RawImage(
+                        image: snapshot.data,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      );
+                    }
+
+                    return Container(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      child: Center(
+                        child: Icon(
+                          Icons.photo_filter,
+                          size: 48,
+                          color: Colors.white.withValues(alpha: 0.3),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -264,30 +347,30 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: template.tags.take(3).map((tag) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          tag,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                  // const SizedBox(height: 8),
+                  // Wrap(
+                  //   spacing: 4,
+                  //   runSpacing: 4,
+                  //   children: template.tags.take(3).map((tag) {
+                  //     return Container(
+                  //       padding: const EdgeInsets.symmetric(
+                  //         horizontal: 6,
+                  //         vertical: 2,
+                  //       ),
+                  //       decoration: BoxDecoration(
+                  //         color: Colors.blue.withValues(alpha: 0.3),
+                  //         borderRadius: BorderRadius.circular(4),
+                  //       ),
+                  //       child: Text(
+                  //         tag,
+                  //         style: const TextStyle(
+                  //           color: Colors.white,
+                  //           fontSize: 10,
+                  //         ),
+                  //       ),
+                  //     );
+                  //   }).toList(),
+                  // ),
                 ],
               ),
             ),

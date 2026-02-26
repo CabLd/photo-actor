@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:audio_helper/audio_helper.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:audio_helper/audio_helper.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
@@ -19,6 +19,7 @@ import '../models/style_template.dart';
 import '../storage/filter_repository.dart';
 import '../widgets/actionButton.dart';
 import '../widgets/breathingRecordDot.dart';
+import '../widgets/tech_style_zoom_control.dart';
 import 'captured_gallery_page.dart';
 import 'filter_library_page.dart';
 
@@ -48,10 +49,11 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   StyleTemplate? _currentTemplate;
 
   static String get _apiBaseUrl {
-    return 'http://10.138.159.170:8000';
+    return 'http://10.249.213.118:8000';
   }
 
   String _templateId = "default_original";
+
   // Shader parameters
   double _brightness = 0.0; // -1.0 to 1.0
   double _saturation = 1.0; // 0.0 to 2.0
@@ -73,6 +75,11 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   ui.FragmentProgram? _fragmentProgram;
   bool _shaderReady = false;
+
+  double _zoomLevel = 1.0;
+  static const List<double> _zoomOptions = [0.7, 1.0, 2.0];
+  double? _minZoomLevel;
+  double? _maxZoomLevel;
 
   @override
   void initState() {
@@ -142,11 +149,19 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       );
       await newController.initialize();
       if (!mounted) return;
+      double? minZ, maxZ;
+      try {
+        minZ = await newController.getMinZoomLevel();
+        maxZ = await newController.getMaxZoomLevel();
+      } catch (_) {}
+      if (!mounted) return;
       final old = _controller;
       _controller = newController;
       setState(() {
         _isInitialized = true;
         _error = null;
+        _minZoomLevel = minZ;
+        _maxZoomLevel = maxZ;
       });
       old?.dispose();
     } catch (e) {
@@ -488,6 +503,12 @@ class _CameraFilterPageState extends State<CameraFilterPage>
                 ),
                 if (_shaderReady && _fragmentProgram != null)
                   Positioned.fill(child: _buildShaderOverlay()),
+                Positioned(
+                  bottom: 20,
+                  left: 0,
+                  right: 0,
+                  child: _buildZoomBar(),
+                ),
               ],
             ),
             SizedBox(
@@ -521,6 +542,28 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     );
   }
 
+  Widget _buildZoomBar() {
+    final ctrl = _controller;
+    final minZ = _minZoomLevel ?? 1.0;
+    final maxZ = _maxZoomLevel ?? 1.0;
+    final canZoom = ctrl != null && ctrl.value.isInitialized && maxZ >= minZ;
+
+    if (!canZoom) return const SizedBox.shrink();
+
+    return TechStyleZoomControl(
+      currentZoom: _zoomLevel,
+      minZoom: minZ,
+      maxZoom: maxZ,
+      zoomOptions: _zoomOptions,
+      onZoomChanged: (value) {
+        if (mounted) setState(() => _zoomLevel = value);
+        if (ctrl != null) {
+          ctrl.setZoomLevel(value).catchError((_) {});
+        }
+      },
+    );
+  }
+
   Widget _buildToolsBar() {
     return SizedBox(
       width: SizeConfig.screenWidth,
@@ -549,29 +592,32 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   Widget _buildPicStoreEnter() {
     final borderRadius = BorderRadius.circular(10);
-    final child = _latestCapturePath == null
-        ? Icon(
-            Icons.photo,
-            color: Colors.white.withValues(alpha: 0.7),
-            size: 22,
-          )
-        : ClipRRect(
-            borderRadius: borderRadius,
-            child: Image.file(
-              File(_latestCapturePath!),
-              width: 40,
-              height: 40,
-              fit: BoxFit.cover,
-              cacheWidth: 160,
-              errorBuilder: (_, __, ___) {
-                return Icon(
-                  Icons.broken_image,
-                  color: Colors.white.withValues(alpha: 0.7),
-                  size: 22,
-                );
-              },
-            ),
-          );
+    var child = null;
+    if (_latestCapturePath == null) {
+      child = Icon(
+        Icons.photo,
+        color: Colors.white.withValues(alpha: 0.7),
+        size: 22,
+      );
+    } else {
+      child = ClipRRect(
+        borderRadius: borderRadius,
+        child: Image.file(
+          File(_latestCapturePath!),
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          cacheWidth: 160,
+          errorBuilder: (_, __, ___) {
+            return Icon(
+              Icons.broken_image,
+              color: Colors.white.withValues(alpha: 0.7),
+              size: 22,
+            );
+          },
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: () async {

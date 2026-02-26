@@ -16,6 +16,7 @@ import '../commons/string.dart';
 import '../manager/PermissionHelper.dart';
 import '../models/analyze_with_voice_response.dart';
 import '../models/style_template.dart';
+import '../storage/capture_store.dart';
 import '../widgets/actionButton.dart';
 import '../widgets/breathingRecordDot.dart';
 import 'captured_gallery_page.dart';
@@ -44,9 +45,10 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   bool _isAskingAi = false;
   bool _isCapturing = false;
   String? _latestCapturePath;
+  StyleTemplate? _currentTemplate;
 
   static String get _apiBaseUrl {
-    return 'http://10.249.213.118:8000';
+    return 'http://10.138.159.170:8000';
   }
 
   String _templateId = "default_original";
@@ -308,6 +310,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     final shader = resp.shader;
     setState(() {
       _templateId = "default_original";
+      _currentTemplate = null;
       _brightness = shader.brightness;
       _saturation = shader.saturation;
       // _contrast = shader.contrast;
@@ -617,6 +620,23 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     return shader;
   }
 
+  ShaderParams _currentShaderParamsSnapshot() {
+    return ShaderParams(
+      brightness: _brightness,
+      saturation: _saturation,
+      contrast: _contrast,
+      tintR: _tintR,
+      tintG: _tintG,
+      tintB: _tintB,
+      warmth: _warmth,
+      vignette: _vignette,
+      noise: _noise,
+      sharpness: _sharpness,
+      blur: _blur,
+      textureStrength: _textureStrength,
+    );
+  }
+
   Future<void> _captureFilteredPhotoAndSave() async {
     if (_isCapturing) return;
     final controller = _controller;
@@ -674,6 +694,13 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
       sourceImage.dispose();
       filteredImage.dispose();
+
+      await CaptureStore.saveCaptureMeta(
+        imagePath: path,
+        createdAtMs: now,
+        template: _currentTemplate,
+        currentParams: _currentShaderParamsSnapshot(),
+      );
 
       if (!mounted) return;
       setState(() {
@@ -758,6 +785,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
   /// 应用滤镜模板
   void _applyTemplate(StyleTemplate template) {
     setState(() {
+      _currentTemplate = template;
       final shader = template.shader;
       _templateId = template.id;
       _brightness = shader.brightness;

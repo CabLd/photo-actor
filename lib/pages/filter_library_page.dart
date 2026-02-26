@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/style_template.dart';
-import '../services/template_service.dart';
+import '../storage/template_cache.dart';
 
 /// 滤镜库页面
 class FilterLibraryPage extends StatefulWidget {
@@ -30,10 +30,9 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
     });
 
     try {
-      final response = await TemplateService.getAllTemplates();
       setState(() {
-        _templates = response.templates;
-        _filteredTemplates = response.templates;
+        _templates = TemplateCache.loadCachedTemplates();
+        _applyFilter();
         _isLoading = false;
       });
     } catch (e) {
@@ -42,6 +41,25 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
         _isLoading = false;
       });
     }
+  }
+
+  void _applyFilter() {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) {
+      _filteredTemplates = _templates;
+      return;
+    }
+
+    bool matches(StyleTemplate t) {
+      if (t.name.toLowerCase().contains(q)) return true;
+      if (t.description.toLowerCase().contains(q)) return true;
+      for (final tag in t.tags) {
+        if (tag.toLowerCase().contains(q)) return true;
+      }
+      return false;
+    }
+
+    _filteredTemplates = _templates.where(matches).toList(growable: false);
   }
 
   @override
@@ -79,6 +97,7 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
               onChanged: (value) {
                 setState(() {
                   _searchQuery = value;
+                  _applyFilter();
                 });
               },
             ),
@@ -118,13 +137,35 @@ class _FilterLibraryPageState extends State<FilterLibraryPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadTemplates, child: const Text('重试')),
+            ElevatedButton(
+              onPressed: _loadTemplates,
+              child: const Text('刷新本地缓存'),
+            ),
           ],
         ),
       );
     }
 
     if (_filteredTemplates.isEmpty) {
+      if (_templates.isEmpty && _searchQuery.trim().isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.photo_filter_outlined,
+                color: Colors.white.withValues(alpha: 0.5),
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '暂无本地滤镜',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+        );
+      }
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

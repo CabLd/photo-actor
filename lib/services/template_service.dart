@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/style_template.dart';
 
 class TemplateService {
-  static const String baseUrl = 'http://10.249.213.118:8000';
+  static const String baseUrl = 'http://10.138.159.170:8000';
 
   /// 获取所有模板
   static Future<TemplatesResponse> getAllTemplates() async {

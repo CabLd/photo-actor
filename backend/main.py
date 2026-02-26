@@ -30,7 +30,7 @@ from schemas import (
 from services.charaboard_client import analyze_frame
 from services.speech_to_text import transcribe_audio
 from services.text_to_speech import text_to_speech, VOICE_ID_ZH_FEMALE
-from style_templates import get_all_templates, get_template_by_id, search_templates_by_tag
+from services.style_templates import get_all_templates, get_template_by_id, search_templates_by_tag
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

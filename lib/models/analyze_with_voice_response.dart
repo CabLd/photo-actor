@@ -74,16 +74,28 @@ class ShaderBlock {
 
   Map<String, dynamic> toJson() => _$ShaderBlockToJson(this);
 
+  @JsonKey(defaultValue: 1.0)
   final double brightness;
+  @JsonKey(defaultValue: 1.0)
   final double saturation;
+  @JsonKey(defaultValue: 1.0)
   final double contrast;
+  @JsonKey(defaultValue: 1.0)
   final double tintR;
+  @JsonKey(defaultValue: 1.0)
   final double tintG;
+  @JsonKey(defaultValue: 1.0)
   final double tintB;
+  @JsonKey(defaultValue: 1.0)
   final double warmth;
+  @JsonKey(defaultValue: 0.0)
   final double vignette;
+  @JsonKey(defaultValue: 0.0)
   final double noise;
+  @JsonKey(defaultValue: 0.0)
   final double sharpness;
+  @JsonKey(defaultValue: 0.0)
   final double blur;
+  @JsonKey(name: 'texture_strength', defaultValue: 0.0)
   final double textureStrength;
 }

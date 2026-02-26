@@ -404,10 +404,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         // Positioned(left: 0, right: 0, bottom: 150, child: _buildControlPanel()),
 
         // FPS
-        // Positioned(top: 8, right: 8, child: _buildFpsBadge()),
-
-        // 滤镜库按钮（左上角）
-        Positioned(top: 48, left: 16, child: _buildFilterLibraryButton()),
+        // Positioned(top: 8, right: 8, child: _buildFpsBadge())
 
         // 请求 AI 时的 loading
         if (_isAskingAi)
@@ -443,6 +440,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
         fit: BoxFit.cover,
         child: Column(
           children: [
+            SizedBox(height: 80, child: _buildToolsBar()),
             Stack(
               children: [
                 SizedBox(
@@ -485,6 +483,13 @@ class _CameraFilterPageState extends State<CameraFilterPage>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildToolsBar() {
+    return SizedBox(
+      width: SizeConfig.screenWidth,
+      child: Row(children: [_buildFilterLibraryButton()]),
     );
   }
 
@@ -542,38 +547,9 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   /// 滤镜库按钮
   Widget _buildFilterLibraryButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _openFilterLibrary,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.photo_filter, color: Colors.white, size: 20),
-              const SizedBox(width: 6),
-              const Text(
-                '滤镜库',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return InkWell(
+      onTap: _openFilterLibrary,
+      child: const Icon(Icons.photo_filter, color: Colors.white, size: 35),
     );
   }
 

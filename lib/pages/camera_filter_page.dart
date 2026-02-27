@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../commons/filePathHelper.dart';
 import '../commons/sizeConfig.dart';
@@ -86,6 +87,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _audioHelper = AudioHelper(minRecordSeconds: _minRecordSeconds);
+    WakelockPlus.enable();
     _loadShader();
     _initCamera();
     _refreshLatestCapturePath();
@@ -94,6 +96,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     WidgetsBinding.instance.removeObserver(this);
     _audioHelper.dispose();
     _controller?.dispose();
@@ -340,7 +343,7 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       _tintB = shader.tintB;
       _warmth = shader.warmth;
       _vignette = shader.vignette;
-      _noise = shader.noise;
+      // _noise = shader.noise;
       _sharpness = shader.sharpness;
       _blur = shader.blur;
       _textureStrength = shader.textureStrength;
@@ -847,13 +850,13 @@ class _CameraFilterPageState extends State<CameraFilterPage>
       _templateId = template.id;
       _brightness = shader.brightness;
       _saturation = shader.saturation;
-      _contrast = shader.contrast;
+      // _contrast = shader.contrast;
       _tintR = shader.tintR;
       _tintG = shader.tintG;
       _tintB = shader.tintB;
       _warmth = shader.warmth;
       _vignette = shader.vignette;
-      _noise = shader.noise;
+      // _noise = shader.noise;
       _sharpness = shader.sharpness;
       _blur = shader.blur;
       _textureStrength = shader.textureStrength;
